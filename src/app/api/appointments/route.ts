@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { AppointmentService } from "@/services/appointmentService";
-import { getSessionFromRequest } from "@/lib/auth";
+import { getAuthContext } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getAuthContext(req);
     const searchParams = req.nextUrl.searchParams;
     const date = searchParams.get("date");
     const doctorId = searchParams.get("doctorId");
@@ -16,6 +17,8 @@ export async function GET(req: NextRequest) {
     if (doctorId) where.doctorId = doctorId;
     if (patientId) where.patientId = patientId;
     if (status) where.status = status;
+    if (session?.role === "PATIENT") where.patientId = session.patientId || "none";
+    if (session?.role === "DOCTOR" && session.doctorId) where.doctorId = session.doctorId;
     if (date) {
       const d = new Date(date);
       d.setHours(0, 0, 0, 0);
@@ -62,8 +65,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSessionFromRequest(req);
+    const session = await getAuthContext(req);
     const body = await req.json();
+
+    if (session?.role === "PATIENT") body.patientId = session.patientId;
+    if (!body.patientId || !body.doctorId || !body.appointmentDate || !body.timeSlot) {
+      return NextResponse.json(
+        { error: "Patient, doctor, date and time slot are required." },
+        { status: 400 }
+      );
+    }
 
     const result = await AppointmentService.bookAppointment({
       ...body,

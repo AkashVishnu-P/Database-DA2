@@ -77,7 +77,6 @@ async function main() {
 
   const defaultPasswordHash = await bcrypt.hash("Hospital@123", 10);
 
-  // 1. CLEAR EXISTING DATA IN CORRECT ORDER
   console.log("🧹 Cleaning up old tables...");
   await prisma.activityLog.deleteMany();
   await prisma.notification.deleteMany();
@@ -108,7 +107,6 @@ async function main() {
   await prisma.role.deleteMany();
   await prisma.user.deleteMany();
 
-  // 2. CREATE DEPARTMENTS
   console.log("🏢 Seeding 10 Departments...");
   const departments: any[] = [];
   for (const dept of DEPARTMENTS_DATA) {
@@ -124,7 +122,6 @@ async function main() {
     departments.push(d);
   }
 
-  // 3. CREATE ROLES & PERMISSIONS
   console.log("🛡️ Seeding Roles and RBAC Permissions...");
   const roleNames = [
     UserRole.SUPER_ADMIN,
@@ -158,7 +155,6 @@ async function main() {
     }
   }
 
-  // 4. CREATE DEFAULT DEMO USERS FOR EVERY ROLE
   console.log("🔑 Creating standard demo users for all 9 roles (Password: Hospital@123)...");
   const demoUsersConfig = [
     { email: "admin@hospital.com", role: UserRole.SUPER_ADMIN, firstName: "Alexander", lastName: "Vance" },
@@ -188,7 +184,6 @@ async function main() {
     demoUsers[du.role] = createdUser;
   }
 
-  // 5. SEED 30 DOCTORS
   console.log("👨‍⚕️ Seeding 30 Doctors across departments...");
   const doctors: any[] = [];
   const doctorSpecializations = [
@@ -244,7 +239,6 @@ async function main() {
     doctors.push(doc);
   }
 
-  // 6. SEED 40 STAFF (Nurses, Receptionists, Cashiers, Lab Techs, Pharmacists)
   console.log("👥 Seeding 40 Staff Members...");
   const staffMembers: any[] = [];
   const staffRoles = [
@@ -297,7 +291,6 @@ async function main() {
     staffMembers.push(staff);
   }
 
-  // 7. SEED 50 ROOMS & 150 BEDS
   console.log("🛏️ Seeding 50 Rooms with 150 Beds across ICU, General, Semi-Private, Private...");
   const rooms: any[] = [];
   const beds: any[] = [];
@@ -341,7 +334,6 @@ async function main() {
     }
   }
 
-  // 8. SEED 100 PATIENTS
   console.log("🧑‍⚕️ Seeding 100 Patients with realistic clinical profiles...");
   const patients: any[] = [];
   const allergiesList = ["None known", "Penicillin", "Sulfa drugs", "Peanuts", "Latex", "Aspirin", "Iodine contrast"];
@@ -393,7 +385,6 @@ async function main() {
     patients.push(patient);
   }
 
-  // 9. SEED MEDICINES & INVENTORY
   console.log("💊 Seeding 15 Medicines & Inventory batches...");
   const medicines: any[] = [];
   for (const mData of MEDICINES_DATA) {
@@ -412,7 +403,6 @@ async function main() {
     });
     medicines.push(med);
 
-    // Create 2 batches for each medicine
     await prisma.medicineInventory.create({
       data: {
         medicineId: med.id,
@@ -427,7 +417,6 @@ async function main() {
     });
   }
 
-  // 10. SEED LAB TESTS
   console.log("🔬 Seeding 10 Lab Tests...");
   const labTests: any[] = [];
   for (const lt of LAB_TESTS_DATA) {
@@ -445,7 +434,6 @@ async function main() {
     labTests.push(test);
   }
 
-  // 11. SEED 100 ADMISSIONS
   console.log("🏥 Seeding 100 In-Patient Admissions & Bed assignments...");
   const admissions: any[] = [];
   for (let i = 0; i < 100; i++) {
@@ -454,7 +442,7 @@ async function main() {
     const bed = beds[i % beds.length];
     const room = rooms.find(r => r.id === bed.roomId) || rooms[0];
 
-    const isCurrent = i < 35; // 35 actively admitted patients, 65 discharged
+    const isCurrent = i < 35;
     const admitDate = new Date();
     admitDate.setDate(admitDate.getDate() - (isCurrent ? (i % 10) + 1 : (i % 60) + 15));
 
@@ -501,7 +489,6 @@ async function main() {
     }
   }
 
-  // 12. SEED 300 APPOINTMENTS
   console.log("📅 Seeding 300 Outpatient Appointments...");
   const appointments: any[] = [];
   const timeSlots = ["09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM"];
@@ -513,13 +500,10 @@ async function main() {
 
     const apptDate = new Date();
     if (i < 50) {
-      // Today's appointments
       apptDate.setHours(0, 0, 0, 0);
     } else if (i < 200) {
-      // Past appointments
       apptDate.setDate(apptDate.getDate() - ((i % 45) + 1));
     } else {
-      // Upcoming appointments
       apptDate.setDate(apptDate.getDate() + ((i % 14) + 1));
     }
 
@@ -554,7 +538,6 @@ async function main() {
     appointments.push(appt);
   }
 
-  // 13. SEED 100 PRESCRIPTIONS
   console.log("📝 Seeding 100 Prescriptions with dosages...");
   const prescriptions: any[] = [];
   for (let i = 0; i < 100; i++) {
@@ -574,7 +557,6 @@ async function main() {
     });
     prescriptions.push(rx);
 
-    // 2-3 medicine items per prescription
     const numItems = 2 + (i % 2);
     for (let j = 0; j < numItems; j++) {
       const med = medicines[(i + j) % medicines.length];
@@ -593,13 +575,12 @@ async function main() {
     }
   }
 
-  // 14. SEED 200 BILLS, INVOICES & PAYMENTS
   console.log("💳 Seeding 200 Bills, Invoices and Cashier Payments...");
   const cashierUser = demoUsers[UserRole.CASHIER];
 
   for (let i = 0; i < 200; i++) {
     const patient = patients[i % patients.length];
-    const isPaid = i < 140; // 140 paid, 60 pending
+    const isPaid = i < 140;
     const billType = i % 3 === 0 ? BillType.INPATIENT : i % 3 === 1 ? BillType.OUTPATIENT : BillType.PHARMACY;
     const baseAmount = billType === BillType.INPATIENT ? 850.0 + (i * 15) : billType === BillType.OUTPATIENT ? 150.0 : 65.0 + (i * 2);
 
@@ -607,10 +588,12 @@ async function main() {
     const paidAmount = isPaid ? baseAmount : (i % 2 === 0 ? 0 : baseAmount * 0.5);
     const balanceAmount = baseAmount - paidAmount;
     const paymentStatus = balanceAmount <= 0 ? PaymentStatus.PAID : paidAmount > 0 ? PaymentStatus.PARTIALLY_PAID : PaymentStatus.PENDING;
+    const billDate = new Date(Date.now() - ((i * 7) % 330) * 24 * 60 * 60 * 1000);
 
     const bill = await prisma.bill.create({
       data: {
         billNumber,
+        createdAt: billDate,
         patientId: patient.id,
         billType,
         totalAmount: baseAmount,
@@ -634,7 +617,6 @@ async function main() {
       },
     });
 
-    // Create Invoice
     await prisma.invoice.create({
       data: {
         invoiceNumber: `FIN-2026-${String(i + 1).padStart(5, "0")}`,
@@ -643,7 +625,6 @@ async function main() {
       },
     });
 
-    // Create Payment if paid
     if (paidAmount > 0) {
       await prisma.payment.create({
         data: {
@@ -656,12 +637,12 @@ async function main() {
           transactionRef: `TXN-${900000 + i}`,
           status: "SUCCESS",
           notes: "Settled via automated cashier desk",
+          createdAt: billDate,
         },
       });
     }
   }
 
-  // 15. SEED LAB REQUESTS & REPORTS
   console.log("🧪 Seeding Lab Requests and Technician Verified Reports...");
   const labTechStaff = staffMembers.find(s => s.user.role === UserRole.LAB_TECHNICIAN) || staffMembers[3];
 
@@ -703,7 +684,6 @@ async function main() {
     }
   }
 
-  // 16. SEED NOTIFICATIONS & AUDIT LOGS
   console.log("🔔 Seeding System Notifications & Activity Logs...");
   for (const role of roleNames) {
     const user = demoUsers[role];

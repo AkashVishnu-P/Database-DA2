@@ -1,10 +1,8 @@
 import prisma from "@/lib/prisma";
 import { LabRequestStatus, PriorityLevel } from "@prisma/client";
+import { nextCode } from "@/lib/numbering";
 
 export class LabService {
-  /**
-   * Doctor requests a lab test: creates request and attaches test fee to bill
-   */
   static async requestLabTest(data: {
     patientId: string;
     doctorId: string;
@@ -15,9 +13,9 @@ export class LabService {
     userId?: string;
   }) {
     return prisma.$transaction(async (tx) => {
-      const count = await tx.labRequest.count();
-      const year = new Date().getFullYear();
-      const requestNumber = `LR-${year}-${String(count + 1).padStart(5, "0")}`;
+      const requestNumber = await nextCode("LR", 5, await tx.labRequest.count(), async (code) =>
+        !!(await tx.labRequest.findUnique({ where: { requestNumber: code } }))
+      );
 
       const labTest = await tx.labTest.findUnique({
         where: { id: data.labTestId },
@@ -42,9 +40,9 @@ export class LabService {
         },
       });
 
-      // Add lab test fee to bill
-      const billCount = await tx.bill.count();
-      const billNumber = `LAB-${year}-${String(billCount + 1).padStart(5, "0")}`;
+      const billNumber = await nextCode("LAB", 5, await tx.bill.count(), async (code) =>
+        !!(await tx.bill.findUnique({ where: { billNumber: code } }))
+      );
       const fee = Number(labTest.standardFee);
 
       await tx.bill.create({
@@ -90,9 +88,6 @@ export class LabService {
     });
   }
 
-  /**
-   * Lab technician uploads findings & verifies report
-   */
   static async completeReport(data: {
     labRequestId: string;
     technicianId: string;
@@ -127,7 +122,6 @@ export class LabService {
         },
       });
 
-      // Notify ordering doctor
       if (updatedRequest.doctor?.user?.id) {
         await tx.notification.create({
           data: {

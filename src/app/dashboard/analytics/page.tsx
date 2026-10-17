@@ -54,7 +54,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div className="flex flex-col justify-between space-y-4 md:flex-row md:items-center md:space-y-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -72,7 +72,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Analytics KPI Row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="p-4">
           <span className="text-xs text-slate-500">Total Patient Encounters</span>
@@ -104,9 +103,8 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Charts Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Revenue stream breakdown */}
+
         <Card>
           <CardHeader>
             <CardTitle>Revenue Breakdown: Inpatient vs Outpatient</CardTitle>
@@ -127,7 +125,6 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Department Volume */}
         <Card>
           <CardHeader>
             <CardTitle>Departmental Census Distribution</CardTitle>
@@ -137,7 +134,7 @@ export default function AnalyticsPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={charts.departmentDistribution || []}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} interval={0} angle={-20} textAnchor="end" height={45} />
+                <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} interval={0} angle={-30} textAnchor="end" height={60} tickFormatter={(v: string) => v.split(" ")[0]} />
                 <YAxis stroke="#94a3b8" fontSize={11} />
                 <Tooltip contentStyle={{ backgroundColor: "#0f172a", borderRadius: "8px", border: "none", color: "#fff" }} />
                 <Bar dataKey="patients" fill="#3b82f6" radius={[4, 4, 0, 0]} />

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getAuthContext } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getAuthContext(req);
     const searchParams = req.nextUrl.searchParams;
     const status = searchParams.get("status");
     const patientId = searchParams.get("patientId");
@@ -11,6 +13,7 @@ export async function GET(req: NextRequest) {
     const where: any = {};
     if (status) where.paymentStatus = status;
     if (patientId) where.patientId = patientId;
+    if (session?.role === "PATIENT") where.patientId = session.patientId || "none";
 
     const bills = await prisma.bill.findMany({
       where,

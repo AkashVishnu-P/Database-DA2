@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { AdmissionService } from "@/services/admissionService";
-import { getSessionFromRequest } from "@/lib/auth";
+import { getAuthContext } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getAuthContext(req);
     const searchParams = req.nextUrl.searchParams;
     const status = searchParams.get("status");
     const limit = parseInt(searchParams.get("limit") || "100");
 
     const where: any = {};
     if (status) where.status = status;
+    if (session?.role === "PATIENT") where.patientId = session.patientId || "none";
 
     const admissions = await prisma.admission.findMany({
       where,
@@ -21,7 +23,7 @@ export async function GET(req: NextRequest) {
         doctor: { include: { user: true } },
         room: true,
         bed: true,
-        bills: true,
+        bills: { where: { billType: "INPATIENT" }, orderBy: { createdAt: "asc" } },
       },
     });
 
@@ -56,8 +58,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSessionFromRequest(req);
+    const session = await getAuthContext(req);
     const body = await req.json();
+
+    if (!body.patientId || !body.doctorId || !body.bedId) {
+      return NextResponse.json({ error: "Patient, doctor and bed are required." }, { status: 400 });
+    }
+    if (!body.roomId) {
+      body.roomId = (await prisma.bed.findUnique({ where: { id: body.bedId } }))?.roomId;
+    }
 
     const result = await AdmissionService.admitPatient({
       ...body,

@@ -24,13 +24,11 @@ export default function BillingLedgerPage() {
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [search, setSearch] = useState("");
 
-  // Pay Modal
   const [showPayModal, setShowPayModal] = useState(false);
   const [selectedBill, setSelectedBill] = useState<any>(null);
   const [payAmount, setPayAmount] = useState<number>(0);
   const [payMethod, setPayMethod] = useState("CASH");
 
-  // Print Modal
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printedBill, setPrintedBill] = useState<any>(null);
 
@@ -106,7 +104,7 @@ export default function BillingLedgerPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div className="flex flex-col justify-between space-y-4 md:flex-row md:items-center md:space-y-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -139,7 +137,6 @@ export default function BillingLedgerPage() {
         </div>
       </div>
 
-      {/* Table */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
@@ -222,7 +219,6 @@ export default function BillingLedgerPage() {
         </CardContent>
       </Card>
 
-      {/* Pay Modal */}
       <Modal
         isOpen={showPayModal}
         onClose={() => setShowPayModal(false)}
@@ -277,7 +273,6 @@ export default function BillingLedgerPage() {
         </form>
       </Modal>
 
-      {/* Print Modal */}
       <Modal
         isOpen={showPrintModal}
         onClose={() => setShowPrintModal(false)}

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { createSessionToken, AUTH_COOKIE_NAME } from "@/lib/auth";
-import { UserRole } from "@prisma/client";
+import { createSessionToken, getSessionFromRequest, AUTH_COOKIE_NAME } from "@/lib/auth";
 
 const ROLE_EMAIL_MAP: Record<string, string> = {
   SUPER_ADMIN: "admin@hospital.com",
@@ -17,6 +16,14 @@ const ROLE_EMAIL_MAP: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getSessionFromRequest(req);
+    if (!session || !Object.values(ROLE_EMAIL_MAP).includes(session.email)) {
+      return NextResponse.json(
+        { error: "Role switching is only available for demo accounts." },
+        { status: 403 }
+      );
+    }
+
     const { role } = await req.json();
     const targetEmail = ROLE_EMAIL_MAP[role] || "admin@hospital.com";
 

@@ -24,14 +24,12 @@ export default function CashierDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  // Payment Settlement Modal
   const [showPayModal, setShowPayModal] = useState(false);
   const [selectedBill, setSelectedBill] = useState<any>(null);
   const [payAmount, setPayAmount] = useState<number>(0);
   const [payMethod, setPayMethod] = useState("CASH");
   const [transactionRef, setTransactionRef] = useState("");
 
-  // Printable Invoice Modal
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printedBill, setPrintedBill] = useState<any>(null);
 
@@ -120,7 +118,7 @@ export default function CashierDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div className="flex flex-col justify-between space-y-4 md:flex-row md:items-center md:space-y-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -140,7 +138,6 @@ export default function CashierDashboardPage() {
         </div>
       </div>
 
-      {/* Main Grid: Pending Ledger */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
@@ -213,7 +210,6 @@ export default function CashierDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Modal: Process POS Payment */}
       <Modal
         isOpen={showPayModal}
         onClose={() => setShowPayModal(false)}
@@ -292,7 +288,6 @@ export default function CashierDashboardPage() {
         </form>
       </Modal>
 
-      {/* Modal: Printable Invoice / Tax Receipt */}
       <Modal
         isOpen={showPrintModal}
         onClose={() => setShowPrintModal(false)}
@@ -301,7 +296,7 @@ export default function CashierDashboardPage() {
       >
         {printedBill && (
           <div className="space-y-4 text-xs font-sans p-4 border border-slate-200 rounded-xl bg-white dark:bg-slate-900 dark:border-slate-800">
-            {/* Invoice Header */}
+
             <div className="flex justify-between items-start border-b border-slate-200 pb-3 dark:border-slate-800">
               <div>
                 <h3 className="text-lg font-bold text-sky-700 dark:text-sky-400">
@@ -322,7 +317,6 @@ export default function CashierDashboardPage() {
               </div>
             </div>
 
-            {/* Patient & Billing Details */}
             <div className="grid grid-cols-2 gap-4 py-2 bg-slate-50 dark:bg-slate-950 p-3 rounded-lg">
               <div>
                 <span className="text-[10px] uppercase text-slate-400 font-bold block">Patient Information</span>
@@ -336,7 +330,6 @@ export default function CashierDashboardPage() {
               </div>
             </div>
 
-            {/* Itemized Line Items */}
             <div>
               <table className="w-full text-left">
                 <thead>
@@ -360,7 +353,6 @@ export default function CashierDashboardPage() {
               </table>
             </div>
 
-            {/* Totals Summary */}
             <div className="border-t border-slate-200 pt-3 dark:border-slate-800 flex justify-end">
               <div className="w-48 space-y-1">
                 <div className="flex justify-between">
@@ -378,7 +370,6 @@ export default function CashierDashboardPage() {
               </div>
             </div>
 
-            {/* Print action footer */}
             <div className="flex justify-end pt-3">
               <Button
                 onClick={() => {

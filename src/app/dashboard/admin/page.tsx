@@ -79,7 +79,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Header & Executive Quick Actions */}
+
       <div className="flex flex-col justify-between space-y-4 md:flex-row md:items-center md:space-y-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -103,9 +103,8 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* 4 Main KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Total Admitted */}
+
         <Card className="border-l-4 border-l-sky-500">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -124,7 +123,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Today's Appointments */}
         <Card className="border-l-4 border-l-emerald-500">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -143,7 +141,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Revenue Collected */}
         <Card className="border-l-4 border-l-amber-500">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -161,7 +158,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Pending Ledger */}
         <Card className="border-l-4 border-l-rose-500">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -180,9 +176,8 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      {/* Visual Charts: Monthly Revenue & Department Load */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
-        {/* Monthly Revenue Trend */}
+
         <Card className="lg:col-span-4">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -215,7 +210,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Department Distribution Bar Chart */}
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Department Load</CardTitle>
@@ -225,7 +219,7 @@ export default function AdminDashboardPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={charts.departmentDistribution || []} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} interval={0} angle={-20} textAnchor="end" height={45} />
+                <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} interval={0} angle={-30} textAnchor="end" height={60} tickFormatter={(v: string) => v.split(" ")[0]} />
                 <YAxis stroke="#94a3b8" fontSize={11} />
                 <Tooltip contentStyle={{ backgroundColor: "#0f172a", borderRadius: "8px", border: "none", color: "#fff" }} />
                 <Bar dataKey="patients" fill="#0d9488" radius={[4, 4, 0, 0]} />
@@ -235,9 +229,8 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      {/* Bottom Grid: Live Activity Stream & Operational Quick Stats */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Recent Activity Log */}
+
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -281,7 +274,6 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Inpatient Bed Status Breakdown */}
         <Card>
           <CardHeader>
             <CardTitle>Ward Bed Capacity</CardTitle>

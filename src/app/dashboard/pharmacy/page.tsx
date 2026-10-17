@@ -54,7 +54,7 @@ export default function PharmacyInventoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div className="flex flex-col justify-between space-y-4 md:flex-row md:items-center md:space-y-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -74,7 +74,6 @@ export default function PharmacyInventoryPage() {
         </div>
       </div>
 
-      {/* Grid of Medicines */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>

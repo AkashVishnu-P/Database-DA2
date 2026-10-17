@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { PaymentMethod, PaymentStatus } from "@prisma/client";
+import { nextCode } from "@/lib/numbering";
 
 export interface RecordPaymentDTO {
   billId: string;
@@ -11,14 +12,6 @@ export interface RecordPaymentDTO {
 }
 
 export class BillingService {
-  /**
-   * Processes a bill payment atomically:
-   * 1. Creates Payment record with receiptNumber
-   * 2. Recalculates Bill paidAmount and balanceAmount
-   * 3. Flips Bill status to PAID or PARTIALLY_PAID
-   * 4. Auto-generates formal Invoice record if not present
-   * 5. Emits ActivityLog
-   */
   static async recordPayment(data: RecordPaymentDTO) {
     return prisma.$transaction(async (tx) => {
       const bill = await tx.bill.findUnique({
@@ -32,18 +25,21 @@ export class BillingService {
       const currentNet = Number(bill.netAmount);
       const paymentAmount = Number(data.amount);
 
-      if (paymentAmount <= 0) throw new Error("Payment amount must be greater than zero.");
+      if (!(paymentAmount > 0)) throw new Error("Payment amount must be greater than zero.");
+      if (bill.paymentStatus === PaymentStatus.PAID) throw new Error("This bill is already fully paid.");
+      const outstanding = Number(bill.balanceAmount);
+      if (paymentAmount > outstanding + 0.001) {
+        throw new Error(`Amount exceeds the outstanding balance of ${outstanding.toFixed(2)}.`);
+      }
 
       const newPaid = currentPaid + paymentAmount;
       const newBalance = Math.max(0, currentNet - newPaid);
       const isFullyPaid = newBalance <= 0;
 
-      // 1. Receipt Number
-      const paymentCount = await tx.payment.count();
-      const year = new Date().getFullYear();
-      const receiptNumber = `RCP-${year}-${String(paymentCount + 1).padStart(5, "0")}`;
+      const receiptNumber = await nextCode("RCP", 5, await tx.payment.count(), async (code) =>
+        !!(await tx.payment.findUnique({ where: { receiptNumber: code } }))
+      );
 
-      // 2. Create Payment
       const payment = await tx.payment.create({
         data: {
           receiptNumber,
@@ -58,7 +54,6 @@ export class BillingService {
         },
       });
 
-      // 3. Update Bill
       const updatedBill = await tx.bill.update({
         where: { id: bill.id },
         data: {
@@ -68,10 +63,10 @@ export class BillingService {
         },
       });
 
-      // 4. Ensure Invoice exists
       if (!bill.invoice) {
-        const invoiceCount = await tx.invoice.count();
-        const invoiceNumber = `FIN-${year}-${String(invoiceCount + 1).padStart(5, "0")}`;
+        const invoiceNumber = await nextCode("FIN", 5, await tx.invoice.count(), async (code) =>
+          !!(await tx.invoice.findUnique({ where: { invoiceNumber: code } }))
+        );
         await tx.invoice.create({
           data: {
             invoiceNumber,
@@ -86,7 +81,6 @@ export class BillingService {
         });
       }
 
-      // 5. Activity Log
       await tx.activityLog.create({
         data: {
           userId: data.cashierId,
@@ -107,9 +101,6 @@ export class BillingService {
     });
   }
 
-  /**
-   * Generates aggregated revenue metrics for dashboards
-   */
   static async getRevenueStats() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);

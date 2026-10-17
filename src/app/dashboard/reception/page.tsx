@@ -25,7 +25,6 @@ export default function ReceptionDashboardPage() {
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Registration modal
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [regForm, setRegForm] = useState({
     firstName: "",
@@ -39,7 +38,6 @@ export default function ReceptionDashboardPage() {
     chronicConditions: "None",
   });
 
-  // Appointment modal
   const [showApptModal, setShowApptModal] = useState(false);
   const [apptForm, setApptForm] = useState({
     patientId: "",
@@ -147,7 +145,7 @@ export default function ReceptionDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div className="flex flex-col justify-between space-y-4 md:flex-row md:items-center md:space-y-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -187,9 +185,8 @@ export default function ReceptionDashboardPage() {
         </div>
       </div>
 
-      {/* Main Grid: Waiting Room Queue & Doctor Roster */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left 2 Cols: Live OPD Waiting Queue */}
+
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -252,7 +249,6 @@ export default function ReceptionDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Right Col: Doctor Duty Roster */}
         <Card>
           <CardHeader>
             <CardTitle>Doctor Availability</CardTitle>
@@ -284,7 +280,6 @@ export default function ReceptionDashboardPage() {
         </Card>
       </div>
 
-      {/* Modal: Fast Patient Registration */}
       <Modal
         isOpen={showRegisterModal}
         onClose={() => setShowRegisterModal(false)}
@@ -383,7 +378,6 @@ export default function ReceptionDashboardPage() {
         </form>
       </Modal>
 
-      {/* Modal: Book Appointment */}
       <Modal
         isOpen={showApptModal}
         onClose={() => setShowApptModal(false)}

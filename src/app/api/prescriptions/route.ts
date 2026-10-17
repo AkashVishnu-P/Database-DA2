@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getSessionFromRequest } from "@/lib/auth";
+import { getAuthContext } from "@/lib/auth";
+import { nextCode } from "@/lib/numbering";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getAuthContext(req);
     const searchParams = req.nextUrl.searchParams;
     const patientId = searchParams.get("patientId");
     const doctorId = searchParams.get("doctorId");
@@ -13,6 +15,7 @@ export async function GET(req: NextRequest) {
     if (patientId) where.patientId = patientId;
     if (doctorId) where.doctorId = doctorId;
     if (status) where.status = status;
+    if (session?.role === "PATIENT") where.patientId = session.patientId || "none";
 
     const prescriptions = await prisma.prescription.findMany({
       where,
@@ -38,7 +41,7 @@ export async function GET(req: NextRequest) {
       items: p.items.map((i) => ({
         id: i.id,
         medicineId: i.medicineId,
-        medicineName: i.medicineName,
+        medicineName: i.medicineName || "Medicine",
         dosage: i.dosage,
         frequency: i.frequency,
         durationDays: i.durationDays,
@@ -56,30 +59,49 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSessionFromRequest(req);
+    const session = await getAuthContext(req);
     const body = await req.json();
 
-    const { patientId, doctorId, appointmentId, admissionId, notes, items } = body;
+    const { patientId, appointmentId, admissionId, notes } = body;
+    const items = Array.isArray(body.items) ? body.items.filter((i: any) => i.medicineId) : [];
 
-    const count = await prisma.prescription.count();
-    const year = new Date().getFullYear();
-    const prescriptionNumber = `RX-${year}-${String(count + 1).padStart(4, "0")}`;
+    if (!patientId || items.length === 0) {
+      return NextResponse.json(
+        { error: "A patient and at least one medicine are required." },
+        { status: 400 }
+      );
+    }
+
+    let doctorId = body.doctorId || session?.doctorId;
+    if (!doctorId && admissionId) {
+      doctorId = (await prisma.admission.findUnique({ where: { id: admissionId } }))?.doctorId;
+    }
+    if (!doctorId && appointmentId) {
+      doctorId = (await prisma.appointment.findUnique({ where: { id: appointmentId } }))?.doctorId;
+    }
+    if (!doctorId) {
+      return NextResponse.json({ error: "Only doctors can issue prescriptions." }, { status: 403 });
+    }
+
+    const prescriptionNumber = await nextCode("RX", 4, await prisma.prescription.count(), async (code) =>
+      !!(await prisma.prescription.findUnique({ where: { prescriptionNumber: code } }))
+    );
 
     const prescription = await prisma.prescription.create({
       data: {
         prescriptionNumber,
         patientId,
-        doctorId: doctorId || session?.doctorId || "doc-1",
+        doctorId,
         appointmentId: appointmentId || null,
         admissionId: admissionId || null,
         notes: notes || null,
         items: {
           create: items.map((i: any) => ({
             medicineId: i.medicineId,
-            medicineName: i.medicineName,
+            medicineName: i.medicineName || "Medicine",
             dosage: i.dosage || "1 tablet",
             frequency: i.frequency || "TDS",
-            durationDays: i.durationDays || 5,
+            durationDays: Number(i.durationDays) || 5,
             instructions: i.instructions || "After meals",
           })),
         },

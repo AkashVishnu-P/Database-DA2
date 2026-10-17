@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BillingService } from "@/services/billingService";
-import { getSessionFromRequest } from "@/lib/auth";
+import { getAuthContext } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSessionFromRequest(req);
+    const session = await getAuthContext(req);
     const body = await req.json();
 
     const { billId, amount, paymentMethod, transactionRef, notes } = body;
@@ -16,7 +17,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cashierId = session?.userId || "cashier-sys";
+    if (!session?.userId) {
+      return NextResponse.json({ error: "Please sign in to record payments." }, { status: 401 });
+    }
+    if (session.role === "PATIENT") {
+      const bill = await prisma.bill.findUnique({ where: { id: billId } });
+      if (!bill || bill.patientId !== session.patientId) {
+        return NextResponse.json({ error: "You can only pay your own bills." }, { status: 403 });
+      }
+    }
+    const cashierId = session.userId;
 
     const result = await BillingService.recordPayment({
       billId,

@@ -30,18 +30,15 @@ export default function DoctorDashboardPage() {
   const [labTests, setLabTests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Modals state
   const [showRxModal, setShowRxModal] = useState(false);
   const [showLabModal, setShowLabModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
 
-  // Prescription Form State
   const [rxNotes, setRxNotes] = useState("");
   const [rxItems, setRxItems] = useState([
     { medicineId: "", medicineName: "", dosage: "1 tablet", frequency: "TDS", durationDays: 5, instructions: "After meals" },
   ]);
 
-  // Lab Order State
   const [selectedLabTestId, setSelectedLabTestId] = useState("");
   const [labPriority, setLabPriority] = useState("NORMAL");
 
@@ -111,19 +108,21 @@ export default function DoctorDashboardPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          patientId: selectedPatient.patientId || selectedPatient.id,
-          appointmentId: selectedPatient.appointmentId || selectedPatient.id,
+          patientId: selectedPatient.patientId,
+          appointmentId: selectedPatient.appointmentNumber ? selectedPatient.id : undefined,
+          admissionId: selectedPatient.admissionNumber ? selectedPatient.id : undefined,
           notes: rxNotes,
           items: rxItems,
         }),
       });
 
+      const data = await res.json();
       if (res.ok) {
         toast.success(`Prescription issued successfully for ${selectedPatient.patientName || selectedPatient.uhid}`);
         setShowRxModal(false);
         setRxNotes("");
       } else {
-        toast.error("Failed to issue prescription");
+        toast.error(data.error || "Failed to issue prescription");
       }
     } catch (err) {
       toast.error("Error creating prescription");
@@ -139,17 +138,20 @@ export default function DoctorDashboardPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          patientId: selectedPatient.patientId || selectedPatient.id,
+          patientId: selectedPatient.patientId,
+          appointmentId: selectedPatient.appointmentNumber ? selectedPatient.id : undefined,
+          admissionId: selectedPatient.admissionNumber ? selectedPatient.id : undefined,
           labTestId: selectedLabTestId,
           priority: labPriority,
         }),
       });
 
+      const data = await res.json();
       if (res.ok) {
         toast.success(`Diagnostic order placed for ${selectedPatient.patientName}`);
         setShowLabModal(false);
       } else {
-        toast.error("Failed to order lab test");
+        toast.error(data.error || "Failed to order lab test");
       }
     } catch (err) {
       toast.error("Error submitting lab order");
@@ -162,7 +164,7 @@ export default function DoctorDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
+
       <div className="flex flex-col justify-between space-y-4 md:flex-row md:items-center md:space-y-0">
         <div>
           <div className="flex items-center space-x-2">
@@ -177,9 +179,8 @@ export default function DoctorDashboardPage() {
         </div>
       </div>
 
-      {/* Main Grid: OPD Consultation Queue & Inpatient Rounds */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Left: Outpatient Queue */}
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -242,7 +243,6 @@ export default function DoctorDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Right: Inpatient Ward Rounds */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -293,7 +293,6 @@ export default function DoctorDashboardPage() {
         </Card>
       </div>
 
-      {/* Modal: Write Prescription */}
       <Modal
         isOpen={showRxModal}
         onClose={() => setShowRxModal(false)}
@@ -415,7 +414,6 @@ export default function DoctorDashboardPage() {
         </form>
       </Modal>
 
-      {/* Modal: Order Diagnostic Lab Test */}
       <Modal
         isOpen={showLabModal}
         onClose={() => setShowLabModal(false)}

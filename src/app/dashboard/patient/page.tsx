@@ -10,7 +10,12 @@ import {
   Clock,
   CheckCircle2,
   Download,
+  Plus,
+  Droplet,
+  MapPin,
 } from "lucide-react";
+import { Modal } from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +28,16 @@ export default function PatientPortalPage() {
   const [bills, setBills] = useState<any[]>([]);
   const [labReports, setLabReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [showBookModal, setShowBookModal] = useState(false);
+  const [booking, setBooking] = useState(false);
+  const [bookForm, setBookForm] = useState({
+    doctorId: "",
+    appointmentDate: new Date().toISOString().split("T")[0],
+    timeSlot: "10:00 AM",
+    notes: "",
+  });
 
   useEffect(() => {
     loadPatientData();
@@ -30,12 +45,23 @@ export default function PatientPortalPage() {
 
   const loadPatientData = async () => {
     try {
-      const [apptRes, rxRes, billRes, labRes] = await Promise.all([
+      const [apptRes, rxRes, billRes, labRes, profileRes, docRes] = await Promise.all([
         fetch("/api/appointments?limit=10"),
         fetch("/api/prescriptions?limit=10"),
         fetch("/api/billing?limit=10"),
         fetch("/api/lab"),
+        fetch("/api/patients?limit=1"),
+        fetch("/api/doctors"),
       ]);
+
+      if (profileRes.ok) {
+        const d = await profileRes.json();
+        setProfile(d.patients?.[0] || null);
+      }
+      if (docRes.ok) {
+        const d = await docRes.json();
+        setDoctors(d.doctors || []);
+      }
 
       if (apptRes.ok) {
         const d = await apptRes.json();
@@ -60,6 +86,32 @@ export default function PatientPortalPage() {
     }
   };
 
+  const handleBook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bookForm.doctorId) {
+      toast.error("Please choose a doctor");
+      return;
+    }
+    setBooking(true);
+    try {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bookForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Appointment booked! Your token is #${data.appointment.tokenNumber}`);
+        setShowBookModal(false);
+        loadPatientData();
+      } else {
+        toast.error(data.error || "Could not book appointment");
+      }
+    } finally {
+      setBooking(false);
+    }
+  };
+
   const handleDownloadInvoice = (billNumber: string) => {
     toast.success(`Downloading tax invoice ${billNumber}...`);
   };
@@ -70,19 +122,41 @@ export default function PatientPortalPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          My Health & Clinical Records Portal
-        </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Access your digital prescriptions, outpatient appointments, laboratory results, and billing receipts.
-        </p>
+      <div className="relative overflow-clip rounded-2xl bg-gradient-to-br from-sky-600 to-teal-500 p-6 text-white shadow-lg shadow-sky-600/20">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-sky-100">Welcome back</p>
+            <h2 className="text-2xl font-bold tracking-tight">
+              {profile ? `${profile.firstName} ${profile.lastName}` : "Patient"}
+            </h2>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              {profile?.uhid && (
+                <span className="rounded-full bg-white/15 px-2.5 py-1 font-mono font-semibold">{profile.uhid}</span>
+              )}
+              {profile?.bloodGroup && (
+                <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1">
+                  <Droplet className="h-3 w-3" /> {profile.bloodGroup}
+                </span>
+              )}
+              {profile?.city && (
+                <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1">
+                  <MapPin className="h-3 w-3" /> {profile.city}
+                </span>
+              )}
+            </div>
+          </div>
+          <Button
+            onClick={() => setShowBookModal(true)}
+            className="bg-white text-sky-700 shadow-md hover:bg-sky-50"
+          >
+            <Plus className="mr-1.5 h-4 w-4" /> Book appointment
+          </Button>
+        </div>
       </div>
 
-      {/* Main Tabs / 2-Col Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Appointments */}
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -93,6 +167,11 @@ export default function PatientPortalPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
+              {appointments.length === 0 && (
+                <p className="rounded-xl border border-dashed border-slate-200 py-6 text-center text-xs text-slate-400 dark:border-slate-800">
+                  No appointments yet. Book one to get started.
+                </p>
+              )}
               {appointments.slice(0, 5).map((apt) => (
                 <div
                   key={apt.id}
@@ -118,7 +197,6 @@ export default function PatientPortalPage() {
           </CardContent>
         </Card>
 
-        {/* Digital Prescriptions */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -129,6 +207,11 @@ export default function PatientPortalPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
+              {prescriptions.length === 0 && (
+                <p className="rounded-xl border border-dashed border-slate-200 py-6 text-center text-xs text-slate-400 dark:border-slate-800">
+                  No prescriptions issued yet.
+                </p>
+              )}
               {prescriptions.slice(0, 5).map((rx) => (
                 <div
                   key={rx.id}
@@ -154,7 +237,6 @@ export default function PatientPortalPage() {
           </CardContent>
         </Card>
 
-        {/* Billing & Tax Invoices */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -165,6 +247,11 @@ export default function PatientPortalPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
+              {bills.length === 0 && (
+                <p className="rounded-xl border border-dashed border-slate-200 py-6 text-center text-xs text-slate-400 dark:border-slate-800">
+                  No bills yet.
+                </p>
+              )}
               {bills.slice(0, 5).map((b) => (
                 <div
                   key={b.id}
@@ -200,7 +287,6 @@ export default function PatientPortalPage() {
           </CardContent>
         </Card>
 
-        {/* Laboratory Reports */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -211,6 +297,11 @@ export default function PatientPortalPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
+              {labReports.length === 0 && (
+                <p className="rounded-xl border border-dashed border-slate-200 py-6 text-center text-xs text-slate-400 dark:border-slate-800">
+                  No lab reports available yet.
+                </p>
+              )}
               {labReports.slice(0, 5).map((lab) => (
                 <div
                   key={lab.id}
@@ -233,6 +324,65 @@ export default function PatientPortalPage() {
           </CardContent>
         </Card>
       </div>
+      <Modal
+        isOpen={showBookModal}
+        onClose={() => setShowBookModal(false)}
+        title="Book an appointment"
+        description="Pick a doctor, date and time. A consultation bill is created automatically."
+        maxWidth="md"
+      >
+        <form onSubmit={handleBook} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Doctor</label>
+            <select
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-900"
+              value={bookForm.doctorId}
+              onChange={(e) => setBookForm({ ...bookForm, doctorId: e.target.value })}
+            >
+              <option value="">Select a doctor</option>
+              {doctors.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} · {d.specialization} ({formatCurrency(d.consultationFee)})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Date</label>
+              <Input
+                type="date"
+                min={new Date().toISOString().split("T")[0]}
+                value={bookForm.appointmentDate}
+                onChange={(e) => setBookForm({ ...bookForm, appointmentDate: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Time</label>
+              <select
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-900"
+                value={bookForm.timeSlot}
+                onChange={(e) => setBookForm({ ...bookForm, timeSlot: e.target.value })}
+              >
+                {["09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "02:00 PM", "02:30 PM", "03:00 PM", "04:00 PM", "05:00 PM"].map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Reason (optional)</label>
+            <Input
+              value={bookForm.notes}
+              onChange={(e) => setBookForm({ ...bookForm, notes: e.target.value })}
+              placeholder="e.g. Fever since 2 days"
+            />
+          </div>
+          <Button type="submit" disabled={booking} className="w-full">
+            {booking ? "Booking..." : "Confirm booking"}
+          </Button>
+        </form>
+      </Modal>
     </div>
   );
 }

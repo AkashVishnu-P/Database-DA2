@@ -23,7 +23,6 @@ export default function NurseDashboardPage() {
   const [admissions, setAdmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Vitals recording modal
   const [showVitalsModal, setShowVitalsModal] = useState(false);
   const [selectedAdmission, setSelectedAdmission] = useState<any>(null);
   const [vitals, setVitals] = useState({
@@ -82,7 +81,7 @@ export default function NurseDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
           Nursing Station & Ward Care Telemetry
@@ -92,9 +91,8 @@ export default function NurseDashboardPage() {
         </p>
       </div>
 
-      {/* Main Grid: Inpatient Ward Care & Bed Visualizer */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left 2 Cols: Inpatients Under Care */}
+
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -141,7 +139,6 @@ export default function NurseDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Right Col: Ward Bed Status Mini Grid */}
         <Card>
           <CardHeader>
             <CardTitle>Ward Bed Overview</CardTitle>
@@ -184,7 +181,6 @@ export default function NurseDashboardPage() {
         </Card>
       </div>
 
-      {/* Modal: Record Vitals */}
       <Modal
         isOpen={showVitalsModal}
         onClose={() => setShowVitalsModal(false)}

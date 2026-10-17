@@ -11,6 +11,7 @@ import {
   Calendar,
   BedDouble,
   Heart,
+  Trash2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,9 +27,16 @@ export default function PatientsDirectoryPage() {
   const [query, setQuery] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadPatients();
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) setQuery(q);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(loadPatients, 250);
+    return () => clearTimeout(timer);
   }, [query]);
 
   const loadPatients = async () => {
@@ -50,13 +58,36 @@ export default function PatientsDirectoryPage() {
     setShowDetailModal(true);
   };
 
+  const handleDeletePatient = async (p: any) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to permanently remove patient ${p.firstName} ${p.lastName} (${p.uhid})? This will delete all clinical history and their login account.`
+    );
+    if (!confirmDelete) return;
+
+    setDeletingId(p.id);
+    try {
+      const res = await fetch(`/api/patients?id=${p.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Patient ${p.uhid} successfully removed`);
+        setPatients((prev) => prev.filter((item) => item.id !== p.id));
+      } else {
+        toast.error(data.error || "Failed to delete patient");
+      }
+    } catch (err) {
+      toast.error("Error removing patient record");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-center text-sm text-slate-500">Loading Patient Records...</div>;
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div className="flex flex-col justify-between space-y-4 md:flex-row md:items-center md:space-y-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -79,7 +110,6 @@ export default function PatientsDirectoryPage() {
         </div>
       </div>
 
-      {/* Patients Table */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
@@ -134,7 +164,7 @@ export default function PatientsDirectoryPage() {
                           </Badge>
                         )}
                       </td>
-                      <td className="py-2.5 text-right">
+                      <td className="py-2.5 text-right space-x-1">
                         <Button
                           variant="outline"
                           size="sm"
@@ -143,6 +173,16 @@ export default function PatientsDirectoryPage() {
                         >
                           <Eye className="mr-1 h-3 w-3" />
                           View EHR
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={deletingId === p.id}
+                          onClick={() => handleDeletePatient(p)}
+                          className="text-xs h-7 px-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/40"
+                          title="Delete Patient Record"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </td>
                     </tr>
@@ -154,7 +194,6 @@ export default function PatientsDirectoryPage() {
         </CardContent>
       </Card>
 
-      {/* Modal: Patient EHR Detail */}
       <Modal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}

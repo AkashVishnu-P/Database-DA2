@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { AdmissionStatus, AdmissionType, BedStatus } from "@prisma/client";
+import { nextCode } from "@/lib/numbering";
 
 export interface AdmitPatientDTO {
   patientId: string;
@@ -13,24 +14,14 @@ export interface AdmitPatientDTO {
 
 export interface DischargePatientDTO {
   admissionId: string;
-  dischargeDoctorId: string;
+  dischargeDoctorId: string | null;
   dischargeSummary: string;
   userId?: string;
 }
 
 export class AdmissionService {
-  /**
-   * Admits a patient with automatic cascading updates:
-   * 1. Updates Bed to OCCUPIED
-   * 2. Increments Room occupiedBeds count
-   * 3. Creates active Admission record
-   * 4. Initializes In-Patient Bill with Admission Fee
-   * 5. Emits notification to Attending Doctor & Nursing staff
-   * 6. Writes ActivityLog audit trail
-   */
   static async admitPatient(data: AdmitPatientDTO) {
     return prisma.$transaction(async (tx) => {
-      // 1. Verify Bed availability
       const bed = await tx.bed.findUnique({
         where: { id: data.bedId },
         include: { room: true },
@@ -38,19 +29,23 @@ export class AdmissionService {
 
       if (!bed) throw new Error("Bed not found.");
       if (bed.isOccupied) throw new Error(`Bed ${bed.bedNumber} is already occupied.`);
+      if (bed.status === BedStatus.MAINTENANCE) throw new Error(`Bed ${bed.bedNumber} is under maintenance.`);
 
-      // 2. Generate unique Admission Number
-      const count = await tx.admission.count();
-      const year = new Date().getFullYear();
-      const admissionNumber = `ADM-${year}-${String(count + 1).padStart(4, "0")}`;
+      const alreadyAdmitted = await tx.admission.findFirst({
+        where: { patientId: data.patientId, status: AdmissionStatus.ADMITTED },
+      });
+      if (alreadyAdmitted) throw new Error("This patient is already admitted.");
 
-      // 3. Create Admission Record
+      const admissionNumber = await nextCode("ADM", 4, await tx.admission.count(), async (code) =>
+        !!(await tx.admission.findUnique({ where: { admissionNumber: code } }))
+      );
+
       const admission = await tx.admission.create({
         data: {
           admissionNumber,
           patientId: data.patientId,
           doctorId: data.doctorId,
-          roomId: data.roomId,
+          roomId: bed.roomId,
           bedId: data.bedId,
           admissionType: data.admissionType || AdmissionType.ELECTIVE,
           diagnosisAtAdmission: data.diagnosisAtAdmission || "Inpatient observation and treatment",
@@ -64,7 +59,6 @@ export class AdmissionService {
         },
       });
 
-      // 4. Update Bed state
       await tx.bed.update({
         where: { id: data.bedId },
         data: {
@@ -74,18 +68,17 @@ export class AdmissionService {
         },
       });
 
-      // 5. Update Room occupancy
       await tx.room.update({
-        where: { id: data.roomId },
+        where: { id: bed.roomId },
         data: {
           occupiedBeds: { increment: 1 },
         },
       });
 
-      // 6. Generate In-Patient Initial Bill
-      const billCount = await tx.bill.count();
-      const billNumber = `INV-${year}-${String(billCount + 1).padStart(4, "0")}`;
-      const admissionFee = 150.0; // standard admission charge
+      const billNumber = await nextCode("INV", 4, await tx.bill.count(), async (code) =>
+        !!(await tx.bill.findUnique({ where: { billNumber: code } }))
+      );
+      const admissionFee = 150.0;
 
       const bill = await tx.bill.create({
         data: {
@@ -111,7 +104,6 @@ export class AdmissionService {
         },
       });
 
-      // 7. Notification for Attending Doctor
       if (admission.doctor?.user?.id) {
         await tx.notification.create({
           data: {
@@ -124,7 +116,6 @@ export class AdmissionService {
         });
       }
 
-      // 8. Audit Activity Log
       await tx.activityLog.create({
         data: {
           userId: data.userId || null,
@@ -134,7 +125,7 @@ export class AdmissionService {
           detailsJson: JSON.stringify({
             admissionNumber,
             patientId: data.patientId,
-            roomId: data.roomId,
+            roomId: bed.roomId,
             bedNumber: bed.bedNumber,
             billNumber,
           }),
@@ -145,15 +136,6 @@ export class AdmissionService {
     });
   }
 
-  /**
-   * Discharges a patient with automatic cascading updates:
-   * 1. Marks Admission as DISCHARGED with timestamp & summary
-   * 2. Frees Bed and updates status to CLEANING
-   * 3. Decrements Room occupancy
-   * 4. Tallies room stay charges and adds to inpatient Bill
-   * 5. Recalculates total balance for cashier settlement
-   * 6. Emits notifications & writes audit log
-   */
   static async dischargePatient(data: DischargePatientDTO) {
     return prisma.$transaction(async (tx) => {
       const admission = await tx.admission.findUnique({
@@ -163,7 +145,7 @@ export class AdmissionService {
           bed: true,
           patient: true,
           doctor: { include: { user: true } },
-          bills: { include: { items: true } },
+          bills: { where: { billType: "INPATIENT" }, orderBy: { createdAt: "asc" }, include: { items: true } },
         },
       });
 
@@ -181,7 +163,6 @@ export class AdmissionService {
       const roomDailyRate = Number(admission.room.dailyRate);
       const totalRoomCharges = stayDays * roomDailyRate;
 
-      // 1. Update Admission record
       const updatedAdmission = await tx.admission.update({
         where: { id: data.admissionId },
         data: {
@@ -192,7 +173,6 @@ export class AdmissionService {
         },
       });
 
-      // 2. Free Bed
       await tx.bed.update({
         where: { id: admission.bedId },
         data: {
@@ -202,15 +182,13 @@ export class AdmissionService {
         },
       });
 
-      // 3. Decrement Room occupancy
-      await tx.room.update({
-        where: { id: admission.roomId },
-        data: {
-          occupiedBeds: { decrement: 1 },
-        },
-      });
+      if (admission.room.occupiedBeds > 0) {
+        await tx.room.update({
+          where: { id: admission.roomId },
+          data: { occupiedBeds: { decrement: 1 } },
+        });
+      }
 
-      // 4. Update Inpatient Bill with Room stay charge
       let activeBill = admission.bills[0];
       if (activeBill) {
         await tx.billItem.create({
@@ -233,11 +211,11 @@ export class AdmissionService {
             totalAmount: newTotal,
             netAmount: newNet,
             balanceAmount: newBalance,
+            paymentStatus: newBalance <= 0 ? "PAID" : Number(activeBill.paidAmount) > 0 ? "PARTIALLY_PAID" : "PENDING",
           },
         });
       }
 
-      // 5. Activity Log
       await tx.activityLog.create({
         data: {
           userId: data.userId || null,

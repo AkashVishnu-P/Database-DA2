@@ -4,7 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
-  title: "CarePulse ERP - Hospital Management System",
+  title: "CarePulse Hospital",
   description: "Commercial-Grade Enterprise Hospital Management & Clinical Operations Platform",
 };
 
@@ -15,10 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans min-h-screen bg-slate-50/50 dark:bg-slate-950 antialiased selection:bg-sky-100 dark:selection:bg-sky-900">
+      <body className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased selection:bg-sky-100 dark:bg-slate-950 dark:text-slate-100 dark:selection:bg-sky-900">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           {children}
-          <Toaster richColors position="top-right" />
+          <Toaster richColors closeButton position="top-right" />
         </ThemeProvider>
       </body>
     </html>

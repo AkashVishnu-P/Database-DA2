@@ -52,6 +52,27 @@ export async function getCurrentUser(): Promise<SessionPayload | null> {
   return verifySessionToken(token);
 }
 
+export async function getAuthContext(req: NextRequest): Promise<SessionPayload | null> {
+  const session = await getSessionFromRequest(req);
+  if (!session) return null;
+  const { default: prisma } = await import("@/lib/prisma");
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    include: { doctorProfile: true, staffProfile: true, patientProfile: true },
+  });
+  if (!user) return null;
+  return {
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    name: `${user.firstName} ${user.lastName}`,
+    avatar: user.avatar,
+    patientId: user.patientProfile?.id || null,
+    doctorId: user.doctorProfile?.id || null,
+    staffId: user.staffProfile?.id || null,
+  };
+}
+
 export async function getSessionFromRequest(req: NextRequest): Promise<SessionPayload | null> {
   const token = req.cookies.get(AUTH_COOKIE_NAME)?.value;
   if (!token) {

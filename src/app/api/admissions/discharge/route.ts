@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AdmissionService } from "@/services/admissionService";
-import { getSessionFromRequest } from "@/lib/auth";
+import { getAuthContext } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSessionFromRequest(req);
+    const session = await getAuthContext(req);
     const body = await req.json();
 
     const { admissionId, dischargeDoctorId, dischargeSummary } = body;
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     const updated = await AdmissionService.dischargePatient({
       admissionId,
-      dischargeDoctorId: dischargeDoctorId || session?.doctorId || "system",
+      dischargeDoctorId: dischargeDoctorId || session?.doctorId || null,
       dischargeSummary,
       userId: session?.userId,
     });

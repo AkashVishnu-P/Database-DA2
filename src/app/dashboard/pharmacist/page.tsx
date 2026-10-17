@@ -79,7 +79,7 @@ export default function PharmacistDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
           Hospital Pharmacy & Drug Inventory Console
@@ -89,9 +89,8 @@ export default function PharmacistDashboardPage() {
         </p>
       </div>
 
-      {/* Main Grid: Dispensing Queue & Stock Levels */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left 2 Cols: Dispensing Queue */}
+
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -142,7 +141,6 @@ export default function PharmacistDashboardPage() {
                       </Button>
                     </div>
 
-                    {/* Prescription items */}
                     <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg text-xs">
                       {rx.items.map((item: any) => (
                         <div key={item.id} className="flex justify-between items-center">
@@ -162,7 +160,6 @@ export default function PharmacistDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Right Col: Medicine Inventory & Stock Alerts */}
         <Card>
           <CardHeader>
             <CardTitle>Inventory & Batch Stock</CardTitle>

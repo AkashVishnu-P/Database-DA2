@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { LabService } from "@/services/labService";
-import { getSessionFromRequest } from "@/lib/auth";
+import { getAuthContext } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const session = await getAuthContext(req);
+    const where: any = {};
+    if (session?.role === "PATIENT") where.patientId = session.patientId || "none";
+
     const [tests, requests] = await Promise.all([
       prisma.labTest.findMany({ orderBy: { category: "asc" } }),
       prisma.labRequest.findMany({
+        where,
         orderBy: { requestedAt: "desc" },
         include: {
           patient: { include: { user: true } },
@@ -66,11 +71,24 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSessionFromRequest(req);
+    const session = await getAuthContext(req);
     const body = await req.json();
 
     if (body.action === "COMPLETE_REPORT") {
-      const technicianId = session?.staffId || "tech-1";
+      if (!body.labRequestId) {
+        return NextResponse.json({ error: "labRequestId is required." }, { status: 400 });
+      }
+      const existing = await prisma.labReport.findUnique({ where: { labRequestId: body.labRequestId } });
+      if (existing) {
+        return NextResponse.json({ error: "A report has already been submitted for this test." }, { status: 409 });
+      }
+      const technicianId =
+        session?.staffId ||
+        (await prisma.staff.findFirst({ where: { user: { role: "LAB_TECHNICIAN" } } }))?.id ||
+        (await prisma.staff.findFirst())?.id;
+      if (!technicianId) {
+        return NextResponse.json({ error: "No lab staff profile found to sign the report." }, { status: 400 });
+      }
       const report = await LabService.completeReport({
         labRequestId: body.labRequestId,
         technicianId,
@@ -81,10 +99,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, report });
     }
 
-    // Default: Order Lab Test
+    if (!body.patientId || !body.labTestId) {
+      return NextResponse.json({ error: "Patient and lab test are required." }, { status: 400 });
+    }
+    const doctorId = body.doctorId || session?.doctorId;
+    if (!doctorId) {
+      return NextResponse.json({ error: "Only doctors can order lab tests." }, { status: 403 });
+    }
+
     const labRequest = await LabService.requestLabTest({
       patientId: body.patientId,
-      doctorId: body.doctorId || session?.doctorId || "doc-1",
+      doctorId,
       labTestId: body.labTestId,
       appointmentId: body.appointmentId,
       admissionId: body.admissionId,

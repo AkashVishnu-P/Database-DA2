@@ -53,29 +53,44 @@ export async function GET() {
     const bedOccupancyRate =
       totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
 
-    // Monthly revenue simulation data for Recharts
-    const monthlyRevenue = [
-      { month: "Jan", revenue: 45200, outpatient: 18000, inpatient: 27200 },
-      { month: "Feb", revenue: 52100, outpatient: 21000, inpatient: 31100 },
-      { month: "Mar", revenue: 48900, outpatient: 19500, inpatient: 29400 },
-      { month: "Apr", revenue: 61400, outpatient: 24000, inpatient: 37400 },
-      { month: "May", revenue: 58700, outpatient: 22800, inpatient: 35900 },
-      { month: "Jun", revenue: 67300, outpatient: 26500, inpatient: 40800 },
-      { month: "Jul", revenue: 72100, outpatient: 28400, inpatient: 43700 },
-      { month: "Aug", revenue: 69800, outpatient: 27100, inpatient: 42700 },
-      { month: "Sep", revenue: 76400, outpatient: 30200, inpatient: 46200 },
-      { month: "Oct", revenue: 84500, outpatient: 33100, inpatient: 51400 },
-    ];
+    const monthStart = new Date(today.getFullYear(), today.getMonth() - 11, 1);
+    const [recentPayments, departments, appointmentsByDept] = await Promise.all([
+      prisma.payment.findMany({
+        where: { createdAt: { gte: monthStart }, status: "SUCCESS" },
+        select: { amount: true, createdAt: true, bill: { select: { billType: true } } },
+      }),
+      prisma.department.findMany({ select: { id: true, name: true } }),
+      prisma.appointment.groupBy({ by: ["departmentId"], _count: { id: true } }),
+    ]);
 
-    // Department Distribution
-    const departmentDistribution = [
-      { name: "General Medicine", patients: 84 },
-      { name: "Cardiology", patients: 62 },
-      { name: "Neurology", patients: 45 },
-      { name: "Orthopedics", patients: 58 },
-      { name: "Pediatrics", patients: 39 },
-      { name: "Emergency", patients: 95 },
-    ];
+    const monthlyRevenue = Array.from({ length: 12 }, (_, i) => {
+      const d = new Date(monthStart.getFullYear(), monthStart.getMonth() + i, 1);
+      return {
+        key: `${d.getFullYear()}-${d.getMonth()}`,
+        month: d.toLocaleString("en-US", { month: "short" }),
+        revenue: 0,
+        outpatient: 0,
+        inpatient: 0,
+      };
+    });
+    for (const p of recentPayments) {
+      const key = `${p.createdAt.getFullYear()}-${p.createdAt.getMonth()}`;
+      const bucket = monthlyRevenue.find((m) => m.key === key);
+      if (!bucket) continue;
+      const amount = Number(p.amount);
+      bucket.revenue += amount;
+      if (p.bill?.billType === "INPATIENT") bucket.inpatient += amount;
+      else bucket.outpatient += amount;
+    }
+
+    const departmentDistribution = departments
+      .map((d) => ({
+        name: d.name,
+        patients: appointmentsByDept.find((a) => a.departmentId === d.id)?._count.id || 0,
+      }))
+      .filter((d) => d.patients > 0)
+      .sort((a, b) => b.patients - a.patients)
+      .slice(0, 8);
 
     return NextResponse.json({
       kpis: {
@@ -94,7 +109,12 @@ export async function GET() {
         pendingBillsAmount: Number(pendingBills._sum.balanceAmount || 0),
       },
       charts: {
-        monthlyRevenue,
+        monthlyRevenue: monthlyRevenue.map(({ key, ...rest }) => ({
+          ...rest,
+          revenue: Math.round(rest.revenue),
+          outpatient: Math.round(rest.outpatient),
+          inpatient: Math.round(rest.inpatient),
+        })),
         departmentDistribution,
       },
       recentActivities: recentActivities.map((a) => ({

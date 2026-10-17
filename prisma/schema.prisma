@@ -7,10 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ----------------------------------------------------
-// ENUMS
-// ----------------------------------------------------
-
 enum UserRole {
   SUPER_ADMIN
   HOSPITAL_ADMIN
@@ -192,10 +188,6 @@ enum NotificationType {
   DANGER
 }
 
-// ----------------------------------------------------
-// USER & RBAC
-// ----------------------------------------------------
-
 model User {
   id           String     @id @default(cuid())
   email        String     @unique
@@ -209,12 +201,10 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  // 1-to-1 profiles
   doctorProfile  Doctor?
   staffProfile   Staff?
   patientProfile Patient?
 
-  // Relations
   activityLogs  ActivityLog[]
   notifications Notification[]
   payments      Payment[]      @relation("CashierPayments")
@@ -236,17 +226,13 @@ model Permission {
   id        String   @id @default(cuid())
   roleId    String
   role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  module    String   // e.g. PATIENTS, BILLING, PHARMACY, ADMISSIONS
-  action    String   // CREATE, READ, UPDATE, DELETE
+  module    String
+  action    String
   createdAt DateTime @default(now())
 
   @@unique([roleId, module, action])
   @@index([roleId])
 }
-
-// ----------------------------------------------------
-// DEPARTMENTS, DOCTORS, STAFF
-// ----------------------------------------------------
 
 model Department {
   id            String   @id @default(cuid())
@@ -278,7 +264,7 @@ model Doctor {
   experienceYears Int          @default(0)
   consultationFee Decimal      @default(50.00) @db.Decimal(10, 2)
   roomNumber      String?
-  scheduleJson    String?      @db.Text // JSON schedule days and hours
+  scheduleJson    String?      @db.Text
   status          DoctorStatus @default(AVAILABLE)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
@@ -311,15 +297,11 @@ model Staff {
   @@index([departmentId])
 }
 
-// ----------------------------------------------------
-// PATIENTS
-// ----------------------------------------------------
-
 model Patient {
   id                    String    @id @default(cuid())
   userId                String?   @unique
   user                  User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  uhid                  String    @unique // Unique Hospital ID e.g. UHID-2026-0001
+  uhid                  String    @unique
   bloodGroup            String?
   dateOfBirth           DateTime
   gender                String
@@ -348,10 +330,6 @@ model Patient {
 
   @@index([uhid])
 }
-
-// ----------------------------------------------------
-// ROOMS & BEDS
-// ----------------------------------------------------
 
 model Room {
   id           String     @id @default(cuid())
@@ -393,13 +371,9 @@ model Bed {
   @@index([status])
 }
 
-// ----------------------------------------------------
-// ADMISSIONS (IN-PATIENT)
-// ----------------------------------------------------
-
 model Admission {
   id                   String          @id @default(cuid())
-  admissionNumber      String          @unique // e.g. ADM-2026-0001
+  admissionNumber      String          @unique
   patientId            String
   patient              Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctorId             String
@@ -431,13 +405,9 @@ model Admission {
   @@index([admissionNumber])
 }
 
-// ----------------------------------------------------
-// APPOINTMENTS (OUT-PATIENT)
-// ----------------------------------------------------
-
 model Appointment {
   id                String            @id @default(cuid())
-  appointmentNumber String            @unique // e.g. APT-2026-0001
+  appointmentNumber String            @unique
   patientId         String
   patient           Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctorId          String
@@ -445,12 +415,12 @@ model Appointment {
   departmentId      String
   department        Department        @relation(fields: [departmentId], references: [id])
   appointmentDate   DateTime
-  timeSlot          String            // e.g. "09:30 - 10:00"
-  tokenNumber       Int               // Queue token for the day
+  timeSlot          String
+  tokenNumber       Int
   status            AppointmentStatus @default(SCHEDULED)
   type              AppointmentType   @default(OUTPATIENT)
   priority          PriorityLevel     @default(NORMAL)
-  vitalsJson        String?           @db.Text // BP, Pulse, Temp, SpO2, Weight
+  vitalsJson        String?           @db.Text
   notes             String?           @db.Text
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
@@ -467,10 +437,6 @@ model Appointment {
   @@index([status])
 }
 
-// ----------------------------------------------------
-// MEDICAL RECORDS & DIAGNOSES
-// ----------------------------------------------------
-
 model MedicalRecord {
   id               String       @id @default(cuid())
   patientId        String
@@ -486,8 +452,8 @@ model MedicalRecord {
   symptoms         String?      @db.Text
   examinationNotes String?      @db.Text
   diagnosis        String?      @db.Text
-  vitalsJson       String?      @db.Text // BP, Pulse, Temp, SpO2, BMI
-  attachmentsJson  String?      @db.Text // URLs to attached reports/scans
+  vitalsJson       String?      @db.Text
+  attachmentsJson  String?      @db.Text
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -502,7 +468,7 @@ model Diagnosis {
   id              String        @id @default(cuid())
   medicalRecordId String
   medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
-  icdCode         String?       // ICD-10 Code e.g. I10, E11
+  icdCode         String?
   description     String
   type            DiagnosisType @default(PRIMARY)
   createdAt       DateTime      @default(now())
@@ -511,18 +477,14 @@ model Diagnosis {
   @@index([icdCode])
 }
 
-// ----------------------------------------------------
-// PHARMACY & INVENTORY
-// ----------------------------------------------------
-
 model Medicine {
   id           String       @id @default(cuid())
-  code         String       @unique // e.g. MED-001
+  code         String       @unique
   name         String
   genericName  String
-  category     String       // Antibiotic, Analgesic, Antipyretic, etc.
+  category     String
   form         MedicineForm @default(TABLET)
-  strength     String       // e.g. "500mg", "10ml"
+  strength     String
   manufacturer String
   unitPrice    Decimal      @db.Decimal(10, 2)
   reorderLevel Int          @default(50)
@@ -547,7 +509,7 @@ model MedicineInventory {
   quantityInStock Int             @default(0)
   purchasePrice   Decimal         @db.Decimal(10, 2)
   sellingPrice    Decimal         @db.Decimal(10, 2)
-  location        String?         // Shelf/Aisle e.g. "Rack-A3"
+  location        String?
   status          InventoryStatus @default(IN_STOCK)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -560,7 +522,7 @@ model MedicineInventory {
 
 model Prescription {
   id                 String             @id @default(cuid())
-  prescriptionNumber String             @unique // e.g. RX-2026-0001
+  prescriptionNumber String             @unique
   patientId          String
   patient            Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctorId           String
@@ -589,23 +551,19 @@ model PrescriptionItem {
   medicineId     String
   medicine       Medicine     @relation(fields: [medicineId], references: [id])
   medicineName   String
-  dosage         String       // e.g. "1 tablet"
-  frequency      String       // e.g. "TDS (3 times/day)"
+  dosage         String
+  frequency      String
   durationDays   Int          @default(5)
-  instructions   String?      // e.g. "After meals"
+  instructions   String?
   isDispensed    Boolean      @default(false)
 
   @@index([prescriptionId])
   @@index([medicineId])
 }
 
-// ----------------------------------------------------
-// SERVICES CATALOG
-// ----------------------------------------------------
-
 model Service {
   id           String          @id @default(cuid())
-  code         String          @unique // e.g. SRV-001
+  code         String          @unique
   name         String
   category     ServiceCategory @default(CONSULTATION)
   standardCost Decimal         @db.Decimal(10, 2)
@@ -619,15 +577,11 @@ model Service {
   @@index([category])
 }
 
-// ----------------------------------------------------
-// LABORATORY & DIAGNOSTICS
-// ----------------------------------------------------
-
 model LabTest {
   id               String   @id @default(cuid())
-  code             String   @unique // e.g. LAB-CBC, LAB-LIPID
+  code             String   @unique
   name             String
-  category         String   // Hematology, Biochemistry, Radiology, etc.
+  category         String
   standardFee      Decimal  @db.Decimal(10, 2)
   normalRange      String?  @db.Text
   unit             String?
@@ -643,7 +597,7 @@ model LabTest {
 
 model LabRequest {
   id            String           @id @default(cuid())
-  requestNumber String           @unique // e.g. LR-2026-0001
+  requestNumber String           @unique
   patientId     String
   patient       Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctorId      String
@@ -673,7 +627,7 @@ model LabReport {
   labRequest   LabRequest @relation(fields: [labRequestId], references: [id], onDelete: Cascade)
   technicianId String
   technician   Staff      @relation("TechnicianReports", fields: [technicianId], references: [id])
-  resultJson   String     @db.Text // JSON object of parameters & values
+  resultJson   String     @db.Text
   remarks      String?    @db.Text
   isAbnormal   Boolean    @default(false)
   reportFileUrl String?
@@ -684,13 +638,9 @@ model LabReport {
   @@index([technicianId])
 }
 
-// ----------------------------------------------------
-// BILLING, PAYMENTS & INSURANCE
-// ----------------------------------------------------
-
 model Bill {
   id             String        @id @default(cuid())
-  billNumber     String        @unique // e.g. INV-2026-0001
+  billNumber     String        @unique
   patientId      String
   patient        Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
   admissionId    String?
@@ -744,13 +694,13 @@ model BillItem {
 
 model Invoice {
   id            String    @id @default(cuid())
-  invoiceNumber String    @unique // e.g. FIN-2026-0001
+  invoiceNumber String    @unique
   billId        String    @unique
   bill          Bill      @relation(fields: [billId], references: [id], onDelete: Cascade)
   issuedAt      DateTime  @default(now())
   dueDate       DateTime?
   pdfUrl        String?
-  status        String    @default("ISSUED") // ISSUED, PAID, VOID
+  status        String    @default("ISSUED")
   createdAt     DateTime  @default(now())
 
   @@index([invoiceNumber])
@@ -758,7 +708,7 @@ model Invoice {
 
 model Payment {
   id            String        @id @default(cuid())
-  receiptNumber String        @unique // e.g. RCP-2026-0001
+  receiptNumber String        @unique
   billId        String
   bill          Bill          @relation(fields: [billId], references: [id], onDelete: Cascade)
   cashierId     String
@@ -767,8 +717,8 @@ model Payment {
   patient       Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
   amount        Decimal       @db.Decimal(10, 2)
   paymentMethod PaymentMethod @default(CASH)
-  transactionRef String?      // UPI / card transaction auth code
-  status        String        @default("SUCCESS") // SUCCESS, REFUNDED
+  transactionRef String?
+  status        String        @default("SUCCESS")
   notes         String?
   createdAt     DateTime      @default(now())
 
@@ -798,10 +748,6 @@ model InsuranceClaim {
   @@index([claimStatus])
 }
 
-// ----------------------------------------------------
-// NOTIFICATIONS & AUDIT LOGS
-// ----------------------------------------------------
-
 model Notification {
   id        String           @id @default(cuid())
   userId    String
@@ -821,8 +767,8 @@ model ActivityLog {
   id         String   @id @default(cuid())
   userId     String?
   user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action     String   // e.g. PATIENT_ADMITTED, BILL_PAID, PRESCRIPTION_DISPENSED
-  entityType String   // e.g. Patient, Bill, Admission
+  action     String
+  entityType String
   entityId   String?
   detailsJson String? @db.Text
   ipAddress  String?

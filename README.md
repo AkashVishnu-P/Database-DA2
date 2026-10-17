@@ -113,12 +113,12 @@ The automated seed script populates over **1,000 interconnected records**:
 ### 2. Configure Database
 In your MySQL instance, create the database:
 ```sql
-CREATE DATABASE IF NOT EXISTS hospital_erp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS DBMS_PROJECT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 Verify your `.env` configuration:
 ```env
-DATABASE_URL="mysql://root@127.0.0.1:3306/hospital_erp"
+DATABASE_URL="mysql://root@127.0.0.1:3306/DBMS_PROJECT"
 JWT_SECRET="hospital_erp_super_secret_jwt_key_2026_production_quality"
 ```
 
@@ -127,14 +127,17 @@ JWT_SECRET="hospital_erp_super_secret_jwt_key_2026_production_quality"
 npx prisma db push
 ```
 
-### 4. Seed Realistic Dataset
+### 4. Seed Realistic Dataset (optional, wipes existing rows)
 ```bash
-npx prisma db seed
-# or
 npm run db:seed
 ```
 
-### 5. Start Development Server
+### 5. Install the PL/SQL Routines
+```bash
+mysql -u root DBMS_PROJECT < sql/plsql.sql
+```
+
+### 6. Start Development Server
 ```bash
 npm run dev
 ```
@@ -147,8 +150,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 1. **Next.js 15 Project Source**: Complete clean architecture in `src/`
 2. **Prisma Schema**: `prisma/schema.prisma`
-3. **Raw SQL Schema**: `schema.sql` (direct MySQL DDL)
+3. **SQL Folder** (`sql/`):
+   - `schema.sql`: all tables, generated from the Prisma schema
+   - `sample_data.sql`: a few rows for practicing queries
+   - `easy_queries.sql`: simple SELECT, WHERE, ORDER BY, GROUP BY, JOIN, subquery, INSERT/UPDATE/DELETE and views
+   - `plsql.sql`: simple stored procedures, functions, a cursor, loops and triggers (MySQL stored-program syntax, the MySQL equivalent of PL/SQL)
 4. **Seed Script**: `prisma/seed.ts` (populating 1000+ realistic records)
 5. **Entity Relationship Diagram**: `ER_DIAGRAM.md`
 6. **REST API Documentation**: `API_DOCS.md`
-7. **Implementation Design Plan**: `implementation_plan.md`

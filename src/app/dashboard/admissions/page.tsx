@@ -26,7 +26,6 @@ export default function AdmissionsPage() {
   const [beds, setBeds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Admit Modal
   const [showAdmitModal, setShowAdmitModal] = useState(false);
   const [admitForm, setAdmitForm] = useState({
     patientId: "",
@@ -37,7 +36,6 @@ export default function AdmissionsPage() {
     diagnosisAtAdmission: "Inpatient observation and treatment",
   });
 
-  // Discharge Modal
   const [showDischargeModal, setShowDischargeModal] = useState(false);
   const [selectedAdmission, setSelectedAdmission] = useState<any>(null);
   const [dischargeSummary, setDischargeSummary] = useState(
@@ -145,7 +143,7 @@ export default function AdmissionsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div className="flex flex-col justify-between space-y-4 md:flex-row md:items-center md:space-y-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -179,7 +177,6 @@ export default function AdmissionsPage() {
         </div>
       </div>
 
-      {/* Main Table: Currently Admitted Patients */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
@@ -261,7 +258,6 @@ export default function AdmissionsPage() {
         </CardContent>
       </Card>
 
-      {/* Modal: Admit Patient */}
       <Modal
         isOpen={showAdmitModal}
         onClose={() => setShowAdmitModal(false)}
@@ -368,7 +364,6 @@ export default function AdmissionsPage() {
         </form>
       </Modal>
 
-      {/* Modal: Approve Discharge */}
       <Modal
         isOpen={showDischargeModal}
         onClose={() => setShowDischargeModal(false)}

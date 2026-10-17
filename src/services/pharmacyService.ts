@@ -1,17 +1,8 @@
 import prisma from "@/lib/prisma";
 import { PrescriptionStatus, InventoryStatus } from "@prisma/client";
+import { nextCode } from "@/lib/numbering";
 
 export class PharmacyService {
-  /**
-   * Dispenses prescription medications:
-   * 1. Finds active stock batches in MedicineInventory
-   * 2. Decrements quantityInStock atomically
-   * 3. Sets inventory status to LOW_STOCK / OUT_OF_STOCK if threshold met
-   * 4. Updates PrescriptionItem.isDispensed = true
-   * 5. Sets Prescription.status = DISPENSED
-   * 6. Creates a pharmacy Bill or appends to patient bill
-   * 7. Records audit activity log
-   */
   static async dispensePrescription(prescriptionId: string, pharmacistUserId?: string) {
     return prisma.$transaction(async (tx) => {
       const prescription = await tx.prescription.findUnique({
@@ -40,17 +31,16 @@ export class PharmacyService {
       for (const item of prescription.items) {
         if (item.isDispensed) continue;
 
-        // Find available batch for this medicine
         const batch = await tx.medicineInventory.findFirst({
           where: {
             medicineId: item.medicineId,
             quantityInStock: { gt: 0 },
             expiryDate: { gt: new Date() },
           },
-          orderBy: { expiryDate: "asc" }, // FIFO by expiry
+          orderBy: { expiryDate: "asc" },
         });
 
-        const qtyNeeded = Math.max(1, item.durationDays * 2); // Standard dispensation calculation
+        const qtyNeeded = Math.max(1, item.durationDays * 2);
 
         if (batch) {
           const deductQty = Math.min(batch.quantityInStock, qtyNeeded);
@@ -82,23 +72,20 @@ export class PharmacyService {
           totalPrice: itemTotal,
         });
 
-        // Mark item dispensed
         await tx.prescriptionItem.update({
           where: { id: item.id },
           data: { isDispensed: true },
         });
       }
 
-      // Mark prescription dispensed
       await tx.prescription.update({
         where: { id: prescription.id },
         data: { status: PrescriptionStatus.DISPENSED },
       });
 
-      // Generate pharmacy bill
-      const billCount = await tx.bill.count();
-      const year = new Date().getFullYear();
-      const billNumber = `RXB-${year}-${String(billCount + 1).padStart(5, "0")}`;
+      const billNumber = await nextCode("RXB", 5, await tx.bill.count(), async (code) =>
+        !!(await tx.bill.findUnique({ where: { billNumber: code } }))
+      );
 
       const pharmacyBill = await tx.bill.create({
         data: {
@@ -124,7 +111,6 @@ export class PharmacyService {
         },
       });
 
-      // Activity log
       await tx.activityLog.create({
         data: {
           userId: pharmacistUserId || null,

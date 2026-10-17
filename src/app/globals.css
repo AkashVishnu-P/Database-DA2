@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -13,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 204 88% 39%; /* Medical Blue #0284c7 */
+    --primary: 204 88% 39%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96%;
@@ -71,12 +73,11 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-sky-100 dark:selection:bg-sky-900;
+    @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
-/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -92,7 +93,6 @@
   background: rgba(100, 116, 139, 0.6);
 }
 
-/* Glassmorphism accents */
 .glass-panel {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
@@ -106,7 +106,6 @@
   border: 1px solid rgba(51, 65, 85, 0.8);
 }
 
-/* Print specific styles for Invoices & Receipts */
 @media print {
   body {
     background: white !important;

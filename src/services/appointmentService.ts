@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { AppointmentStatus, AppointmentType, PriorityLevel } from "@prisma/client";
+import { nextCode } from "@/lib/numbering";
 
 export interface BookAppointmentDTO {
   patientId: string;
@@ -14,9 +15,6 @@ export interface BookAppointmentDTO {
 }
 
 export class AppointmentService {
-  /**
-   * Books an appointment with queue token assignment, OPD fee billing, and doctor notification
-   */
   static async bookAppointment(data: BookAppointmentDTO) {
     return prisma.$transaction(async (tx) => {
       const apptDate = new Date(data.appointmentDate);
@@ -25,7 +23,6 @@ export class AppointmentService {
       const endOfDay = new Date(apptDate);
       endOfDay.setHours(23, 59, 59, 999);
 
-      // 1. Calculate sequential daily token for this doctor
       const dailyCount = await tx.appointment.count({
         where: {
           doctorId: data.doctorId,
@@ -37,27 +34,25 @@ export class AppointmentService {
       });
       const tokenNumber = dailyCount + 1;
 
-      // 2. Generate unique Appointment Number
-      const totalCount = await tx.appointment.count();
-      const year = new Date().getFullYear();
-      const appointmentNumber = `APT-${year}-${String(totalCount + 1).padStart(5, "0")}`;
+      const appointmentNumber = await nextCode("APT", 5, await tx.appointment.count(), async (code) =>
+        !!(await tx.appointment.findUnique({ where: { appointmentNumber: code } }))
+      );
 
-      // 3. Get doctor to fetch consultation fee
       const doctor = await tx.doctor.findUnique({
         where: { id: data.doctorId },
         include: { user: true, department: true },
       });
       if (!doctor) throw new Error("Doctor not found.");
+      if (Number.isNaN(apptDate.getTime())) throw new Error("Invalid appointment date.");
 
       const consultationFee = Number(doctor.consultationFee);
 
-      // 4. Create Appointment
       const appointment = await tx.appointment.create({
         data: {
           appointmentNumber,
           patientId: data.patientId,
           doctorId: data.doctorId,
-          departmentId: data.departmentId,
+          departmentId: data.departmentId || doctor.departmentId,
           appointmentDate: apptDate,
           timeSlot: data.timeSlot,
           tokenNumber,
@@ -73,9 +68,9 @@ export class AppointmentService {
         },
       });
 
-      // 5. Create Outpatient Consultation Bill
-      const billCount = await tx.bill.count();
-      const billNumber = `OPD-${year}-${String(billCount + 1).padStart(5, "0")}`;
+      const billNumber = await nextCode("OPD", 5, await tx.bill.count(), async (code) =>
+        !!(await tx.bill.findUnique({ where: { billNumber: code } }))
+      );
 
       const bill = await tx.bill.create({
         data: {
@@ -101,7 +96,6 @@ export class AppointmentService {
         },
       });
 
-      // 6. Notification to Doctor
       if (doctor.user?.id) {
         await tx.notification.create({
           data: {
@@ -114,7 +108,6 @@ export class AppointmentService {
         });
       }
 
-      // 7. Activity Log
       await tx.activityLog.create({
         data: {
           userId: data.userId || null,

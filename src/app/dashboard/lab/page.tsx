@@ -23,7 +23,6 @@ export default function LabDashboardPage() {
   const [tests, setTests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Result Entry Modal
   const [showResultModal, setShowResultModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [findings, setFindings] = useState("");
@@ -74,12 +73,13 @@ export default function LabDashboardPage() {
         }),
       });
 
+      const data = await res.json();
       if (res.ok) {
         toast.success(`Lab Report verified and completed for ${selectedRequest.patientName}! Ordering doctor notified.`);
         setShowResultModal(false);
         loadLabData();
       } else {
-        toast.error("Failed to complete lab report");
+        toast.error(data.error || "Failed to complete lab report");
       }
     } catch (err) {
       toast.error("Error submitting lab results");
@@ -95,7 +95,7 @@ export default function LabDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
           Clinical Diagnostics & Pathology Workstation
@@ -105,9 +105,8 @@ export default function LabDashboardPage() {
         </p>
       </div>
 
-      {/* Grid: Pending Orders & Completed */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left 2 Cols: Orders Pending Results */}
+
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -163,7 +162,6 @@ export default function LabDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Right Col: Verified Reports */}
         <Card>
           <CardHeader>
             <CardTitle>Verified Lab Reports</CardTitle>
@@ -195,7 +193,6 @@ export default function LabDashboardPage() {
         </Card>
       </div>
 
-      {/* Modal: Enter Results */}
       <Modal
         isOpen={showResultModal}
         onClose={() => setShowResultModal(false)}

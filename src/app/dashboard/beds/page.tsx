@@ -61,7 +61,7 @@ export default function BedBoardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div className="flex flex-col justify-between space-y-4 md:flex-row md:items-center md:space-y-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -78,7 +78,6 @@ export default function BedBoardPage() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
       <div className="flex flex-wrap gap-1.5 border-b border-slate-200 pb-3 dark:border-slate-800">
         {ROOM_TYPES.map((t) => (
           <button
@@ -95,7 +94,6 @@ export default function BedBoardPage() {
         ))}
       </div>
 
-      {/* Grid of Bed Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {filteredBeds.map((bed) => {
           let cardBorder = "border-slate-200 dark:border-slate-800";

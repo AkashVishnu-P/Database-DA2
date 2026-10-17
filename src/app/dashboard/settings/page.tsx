@@ -41,7 +41,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
           System Administration & RBAC Configuration
@@ -51,7 +51,6 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Database Backup & Health Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
@@ -90,7 +89,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* RBAC Matrix */}
       <Card>
         <CardHeader>
           <CardTitle>Role-Based Access Control (RBAC) Matrix</CardTitle>
