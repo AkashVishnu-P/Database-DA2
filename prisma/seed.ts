@@ -509,7 +509,7 @@ async function main() {
 
     const tokenNumber = (i % 15) + 1;
     const timeSlot = timeSlots[i % timeSlots.length];
-    let status = AppointmentStatus.SCHEDULED;
+    let status: AppointmentStatus = AppointmentStatus.SCHEDULED;
     if (i >= 50 && i < 200) status = AppointmentStatus.COMPLETED;
     else if (i < 10) status = AppointmentStatus.IN_CONSULTATION;
 
